@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Panel del CV</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:Arial,Helvetica,sans-serif;background:#eef1f4;margin:0;color:#222;line-height:1.4}
+.wrap{max-width:720px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:6px 0 14px;color:#1f3a4d}
+.card{background:#fff;border-radius:10px;padding:16px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.card h2{font-size:16px;margin:0 0 6px;color:#1f3a4d}
+.ayuda{font-size:13px;color:#667;margin:2px 0 6px}
+label{display:block;font-size:13px;color:#555;margin:12px 0 4px}
+input[type=text],input[type=tel],textarea,select{width:100%;font-size:16px;padding:9px;border:1px solid #bbb;border-radius:6px;font-family:inherit;background:#fff}
+input[type=color]{width:60px;height:40px;padding:2px;border:1px solid #bbb;border-radius:6px;background:#fff}
+textarea{min-height:100px}
+button,a.btn{font-size:16px;padding:11px 14px;border:0;border-radius:8px;background:#1f3a4d;color:#fff;cursor:pointer;text-decoration:none;display:inline-block;font-family:inherit}
+button.sec,a.btn.sec{background:#e0e5ea;color:#222}
+button.peligro{background:#b3261e}
+button.chico{font-size:14px;padding:7px 10px}
+.fila{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.exp{border:1px solid #d5dbe0;border-radius:8px;padding:10px;margin-top:10px}
+.barra{position:sticky;bottom:0;background:#eef1f4;padding:10px 0;display:flex;gap:8px;flex-wrap:wrap}
+.barra button{flex:1}
+#msg{position:fixed;left:12px;right:12px;bottom:76px;padding:12px 14px;border-radius:8px;color:#fff;font-size:15px;display:none;z-index:10;text-align:center}
+#msg.ok{background:#1e7d3a}
+#msg.err{background:#b3261e}
+#fotoPrev{width:120px;height:120px;border-radius:50%;object-fit:cover;border:3px solid #ccd;display:block;margin:8px 0;background:#ddd}
+.centro{text-align:center;padding-top:60px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Pantalla de ingreso -->
+  <div id="login" class="centro">
+    <h1>Panel del CV</h1>
+    <p>Ingresá con la cuenta de Google administradora.</p>
+    <button id="btnLogin">Entrar con Google</button>
+  </div>
+
+  <!-- Panel de edición -->
+  <div id="panel" hidden>
+    <h1>Panel del CV</h1>
+    <div class="fila" style="margin-bottom:12px">
+      <span id="quien" class="ayuda" style="flex:1"></span>
+      <a class="btn sec chico" href="index.html" target="_blank">Ver mi CV</a>
+      <button class="sec chico" id="btnSalir">Salir</button>
+    </div>
+
+    <div class="card">
+      <h2>Datos principales</h2>
+      <label for="nombre">Nombre</label>
+      <input type="text" id="nombre">
+      <label for="subtitulo">Frase bajo el nombre</label>
+      <input type="text" id="subtitulo">
+      <label for="ciudad">Ciudad</label>
+      <input type="text" id="ciudad">
+      <label for="edad">Edad (se muestra en datos personales; dejalo vacío para ocultarla)</label>
+      <input type="text" id="edad">
+    </div>
+
+    <div class="card">
+      <h2>Foto</h2>
+      <p class="ayuda">Se recorta en cuadrado desde el centro. Revisá que no se vea ningún logo.</p>
+      <img id="fotoPrev" alt="Foto actual">
+      <input type="file" id="foto" accept="image/*">
+      <div style="margin-top:8px"><button class="sec chico" id="btnQuitarFoto">Quitar foto</button></div>
+    </div>
+
+    <div class="card">
+      <h2>Botón de WhatsApp</h2>
+      <label for="whatsapp">Número con código de país, solo números (ej. 59891782945)</label>
+      <input type="tel" id="whatsapp">
+      <label for="textoBoton">Texto del botón</label>
+      <input type="text" id="textoBoton">
+      <label for="mensajeWa">Mensaje que aparece escrito en el chat</label>
+      <textarea id="mensajeWa" style="min-height:70px"></textarea>
+    </div>
+
+    <div class="card">
+      <h2>Perfil</h2>
+      <textarea id="perfil" style="min-height:160px"></textarea>
+    </div>
+
+    <div class="card">
+      <h2>Experiencia laboral</h2>
+      <p class="ayuda">De la más reciente a la más antigua. Usá las flechas para cambiar el orden.</p>
+      <div id="expLista"></div>
+      <div style="margin-top:10px"><button class="sec" id="btnAgregarExp">+ Agregar empleo</button></div>
+      <label for="tareas">Tareas desempeñadas (una por línea)</label>
+      <textarea id="tareas"></textarea>
+      <label for="resumenExp">Resumen de la experiencia</label>
+      <textarea id="resumenExp" style="min-height:70px"></textarea>
+      <label for="notaBps">Nota al final de la experiencia (vacío = no se muestra)</label>
+      <input type="text" id="notaBps">
+    </div>
+
+    <div class="card">
+      <h2>Formación</h2>
+      <p class="ayuda">Una por línea.</p>
+      <textarea id="formacion" style="min-height:70px"></textarea>
+    </div>
+
+    <div class="card">
+      <h2>Habilidades</h2>
+      <p class="ayuda">Una por línea.</p>
+      <textarea id="habilidades"></textarea>
+    </div>
+
+    <div class="card">
+      <h2>Disponibilidad</h2>
+      <textarea id="disponibilidad" style="min-height:60px"></textarea>
+    </div>
+
+    <div class="card">
+      <h2>Documentación</h2>
+      <p class="ayuda">Una por línea. Se muestra en la columna lateral.</p>
+      <textarea id="documentacion" style="min-height:80px"></textarea>
+    </div>
+
+    <div class="card">
+      <h2>Aspecto</h2>
+      <div class="fila">
+        <div><label for="colorLateral">Color columna lateral</label><input type="color" id="colorLateral"></div>
+        <div><label for="colorTitulos">Color de títulos</label><input type="color" id="colorTitulos"></div>
+      </div>
+      <p class="ayuda">En la columna lateral el texto es blanco: elegí un color oscuro.</p>
+      <label for="fuente">Tipo de letra</label>
+      <select id="fuente"></select>
+    </div>
+
+    <div class="card">
+      <button class="sec" id="btnRestablecer">Volver a los valores iniciales</button>
+      <p class="ayuda">Solo carga los valores iniciales en el formulario. Se aplican al CV cuando tocás Guardar.</p>
+    </div>
+
+    <div class="barra">
+      <button id="btnGuardar">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+<div id="msg"></div>
+
+<script src="cv-datos.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+
+const app = initializeApp(window.CV_FIREBASE);
+const auth = getAuth(app);
+const db = getDatabase(app);
+
+const FUENTES = ['Arial', 'Georgia', 'Verdana', 'Trebuchet MS', 'Times New Roman', 'Tahoma'];
+const $ = (id) => document.getElementById(id);
+let cv = null;
+
+function lista(x) {
+  if (!x) return [];
+  const a = Array.isArray(x) ? x : Object.keys(x).map((k) => x[k]);
+  return a.filter((v) => v !== undefined && v !== null);
+}
+
+function normalizar(d) {
+  const base = JSON.parse(JSON.stringify(window.CV_DEFAULT));
+  if (!(d && d._v)) return base;
+  const s = (v) => (typeof v === 'string' ? v : '');
+  return {
+    _v: 1,
+    nombre: s(d.nombre), subtitulo: s(d.subtitulo), foto: s(d.foto),
+    ciudad: s(d.ciudad), edad: s(d.edad),
+    whatsapp: s(d.whatsapp), mensajeWa: s(d.mensajeWa), textoBoton: s(d.textoBoton),
+    perfil: s(d.perfil),
+    experiencia: lista(d.experiencia).map((e) => ({ empresa: s(e.empresa), periodo: s(e.periodo), detalle: s(e.detalle) })),
+    tareas: lista(d.tareas).map(s), resumenExp: s(d.resumenExp), notaBps: s(d.notaBps),
+    formacion: lista(d.formacion).map(s), habilidades: lista(d.habilidades).map(s),
+    disponibilidad: s(d.disponibilidad), documentacion: lista(d.documentacion).map(s),
+    tema: Object.assign({}, base.tema, d.tema || {})
+  };
+}
+
+function aviso(texto, error) {
+  const m = $('msg');
+  m.textContent = texto;
+  m.className = error ? 'err' : 'ok';
+  m.style.display = 'block';
+  clearTimeout(aviso.t);
+  aviso.t = setTimeout(() => { m.style.display = 'none'; }, error ? 7000 : 3000);
+}
+
+function renderExp() {
+  const box = $('expLista');
+  box.textContent = '';
+  cv.experiencia.forEach((e, i) => {
+    const div = document.createElement('div');
+    div.className = 'exp';
+    div.innerHTML =
+      '<label>Empresa o lugar</label><input type="text" data-i="' + i + '" data-k="empresa">' +
+      '<label>Período (ej. 2020 – 2022)</label><input type="text" data-i="' + i + '" data-k="periodo">' +
+      '<label>Detalle</label><input type="text" data-i="' + i + '" data-k="detalle">' +
+      '<div class="fila" style="margin-top:10px">' +
+      '<button class="sec chico" data-act="sube" data-i="' + i + '">↑ Subir</button>' +
+      '<button class="sec chico" data-act="baja" data-i="' + i + '">↓ Bajar</button>' +
+      '<button class="peligro chico" data-act="borra" data-i="' + i + '">Eliminar</button></div>';
+    box.appendChild(div);
+    div.querySelectorAll('input').forEach((inp) => { inp.value = e[inp.getAttribute('data-k')] || ''; });
+  });
+}
+
+$('expLista').addEventListener('input', (ev) => {
+  const inp = ev.target;
+  if (inp.tagName !== 'INPUT') return;
+  cv.experiencia[+inp.getAttribute('data-i')][inp.getAttribute('data-k')] = inp.value;
+});
+$('expLista').addEventListener('click', (ev) => {
+  const b = ev.target.closest('button');
+  if (!b) return;
+  const i = +b.getAttribute('data-i');
+  const act = b.getAttribute('data-act');
+  const a = cv.experiencia;
+  if (act === 'sube' && i > 0) { [a[i - 1], a[i]] = [a[i], a[i - 1]]; }
+  else if (act === 'baja' && i < a.length - 1) { [a[i + 1], a[i]] = [a[i], a[i + 1]]; }
+  else if (act === 'borra') {
+    if (!confirm('¿Eliminar este empleo?')) return;
+    a.splice(i, 1);
+  } else return;
+  renderExp();
+});
+$('btnAgregarExp').onclick = () => {
+  cv.experiencia.unshift({ empresa: '', periodo: '', detalle: '' });
+  renderExp();
+};
+
+function ponerFoto() {
+  const img = $('fotoPrev');
+  if (cv.foto) { img.src = cv.foto; img.style.visibility = 'visible'; }
+  else { img.removeAttribute('src'); img.style.visibility = 'hidden'; }
+}
+$('foto').addEventListener('change', (ev) => {
+  const f = ev.target.files[0];
+  if (!f) return;
+  const url = URL.createObjectURL(f);
+  const img = new Image();
+  img.onload = () => {
+    const lado = Math.min(img.width, img.height);
+    const c = document.createElement('canvas');
+    c.width = c.height = 400;
+    c.getContext('2d').drawImage(img, (img.width - lado) / 2, (img.height - lado) / 2, lado, lado, 0, 0, 400, 400);
+    cv.foto = c.toDataURL('image/jpeg', 0.85);
+    URL.revokeObjectURL(url);
+    ponerFoto();
+  };
+  img.onerror = () => aviso('No se pudo leer esa imagen.', true);
+  img.src = url;
+});
+$('btnQuitarFoto').onclick = () => { cv.foto = ''; ponerFoto(); };
+
+const CAMPOS_TEXTO = ['nombre', 'subtitulo', 'ciudad', 'edad', 'whatsapp', 'textoBoton', 'mensajeWa', 'perfil', 'resumenExp', 'notaBps', 'disponibilidad'];
+const CAMPOS_LISTA = ['tareas', 'formacion', 'habilidades', 'documentacion'];
+
+function llenar() {
+  CAMPOS_TEXTO.forEach((k) => { $(k).value = cv[k] || ''; });
+  CAMPOS_LISTA.forEach((k) => { $(k).value = (cv[k] || []).join('\n'); });
+  $('colorLateral').value = cv.tema.colorLateral || '#1f3a4d';
+  $('colorTitulos').value = cv.tema.colorTitulos || '#1f3a4d';
+  $('fuente').value = cv.tema.fuente || 'Arial';
+  ponerFoto();
+  renderExp();
+}
+
+function recoger() {
+  const out = { _v: 1, foto: cv.foto || '' };
+  CAMPOS_TEXTO.forEach((k) => { out[k] = $(k).value.trim(); });
+  CAMPOS_LISTA.forEach((k) => {
+    out[k] = $(k).value.split('\n').map((x) => x.trim()).filter(Boolean);
+  });
+  out.experiencia = cv.experiencia
+    .map((e) => ({ empresa: e.empresa.trim(), periodo: e.periodo.trim(), detalle: e.detalle.trim() }))
+    .filter((e) => e.empresa || e.periodo || e.detalle);
+  out.tema = { colorLateral: $('colorLateral').value, colorTitulos: $('colorTitulos').value, fuente: $('fuente').value };
+  return out;
+}
+
+FUENTES.forEach((f) => {
+  const o = document.createElement('option');
+  o.value = f; o.textContent = f; o.style.fontFamily = f;
+  $('fuente').appendChild(o);
+});
+
+async function cargar() {
+  try {
+    const s = await get(ref(db, 'cv'));
+    cv = normalizar(s.exists() ? s.val() : null);
+  } catch (e) {
+    cv = normalizar(null);
+    aviso('No se pudieron leer los datos guardados; se muestran los iniciales.', true);
+  }
+  llenar();
+}
+
+$('btnGuardar').onclick = async () => {
+  const btn = $('btnGuardar');
+  btn.disabled = true;
+  try {
+    const datos = recoger();
+    await set(ref(db, 'cv'), datos);
+    cv = normalizar(datos);
+    aviso('Guardado ✔  Ya se ve en tu CV.');
+  } catch (e) {
+    const sinPermiso = /permission/i.test(e.code || '') || /permission/i.test(e.message || '');
+    aviso(sinPermiso ? 'Esta cuenta no tiene permiso para guardar. Entrá con la cuenta administradora.' : 'No se pudo guardar: ' + (e.message || e), true);
+  }
+  btn.disabled = false;
+};
+
+$('btnRestablecer').onclick = () => {
+  if (!confirm('¿Cargar los valores iniciales en el formulario? Se pierde lo que no hayas guardado.')) return;
+  cv = normalizar(null);
+  llenar();
+  aviso('Valores iniciales cargados. Tocá Guardar para aplicarlos.');
+};
+
+$('btnLogin').onclick = async () => {
+  try { await signInWithPopup(auth, new GoogleAuthProvider()); }
+  catch (e) { aviso('No se pudo iniciar sesión (' + (e.code || e.message) + ').', true); }
+};
+$('btnSalir').onclick = () => signOut(auth);
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    $('login').hidden = true;
+    $('panel').hidden = false;
+    $('quien').textContent = 'Sesión: ' + (user.email || '');
+    cargar();
+  } else {
+    $('panel').hidden = true;
+    $('login').hidden = false;
+  }
+});
+</script>
+</body>
+</html>
