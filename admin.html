@@ -47,7 +47,8 @@ button.chico{font-size:14px;padding:7px 10px}
     <h1>Panel del CV</h1>
     <div class="fila" style="margin-bottom:12px">
       <span id="quien" class="ayuda" style="flex:1"></span>
-      <a class="btn sec chico" href="index.html" target="_blank">Ver mi CV</a>
+      <a class="btn sec chico" href="app.html">← Inicio</a>
+      <a class="btn sec chico" href="index.html">Ver mi CV</a>
       <button class="sec chico" id="btnSalir">Salir</button>
     </div>
 
@@ -79,6 +80,7 @@ button.chico{font-size:14px;padding:7px 10px}
       <input type="text" id="textoBoton">
       <label for="mensajeWa">Mensaje que aparece escrito en el chat</label>
       <textarea id="mensajeWa" style="min-height:70px"></textarea>
+      <label style="display:flex;gap:10px;align-items:center;margin-top:14px;font-size:15px;color:#222"><input type="checkbox" id="pdfNumero" style="width:22px;height:22px"><span>Mostrar el número escrito en el PDF</span></label>
     </div>
 
     <div class="card">
@@ -174,6 +176,7 @@ function normalizar(d) {
     nombre: s(d.nombre), subtitulo: s(d.subtitulo), foto: s(d.foto),
     ciudad: s(d.ciudad), edad: s(d.edad),
     whatsapp: s(d.whatsapp), mensajeWa: s(d.mensajeWa), textoBoton: s(d.textoBoton),
+    pdfNumero: d.pdfNumero !== false,
     perfil: s(d.perfil),
     experiencia: lista(d.experiencia).map((e) => ({ empresa: s(e.empresa), periodo: s(e.periodo), detalle: s(e.detalle) })),
     tareas: lista(d.tareas).map(s), resumenExp: s(d.resumenExp), notaBps: s(d.notaBps),
@@ -268,12 +271,13 @@ function llenar() {
   $('colorLateral').value = cv.tema.colorLateral || '#1f3a4d';
   $('colorTitulos').value = cv.tema.colorTitulos || '#1f3a4d';
   $('fuente').value = cv.tema.fuente || 'Arial';
+  $('pdfNumero').checked = cv.pdfNumero !== false;
   ponerFoto();
   renderExp();
 }
 
 function recoger() {
-  const out = { _v: 1, foto: cv.foto || '' };
+  const out = { _v: 1, foto: cv.foto || '', pdfNumero: $('pdfNumero').checked };
   CAMPOS_TEXTO.forEach((k) => { out[k] = $(k).value.trim(); });
   CAMPOS_LISTA.forEach((k) => {
     out[k] = $(k).value.split('\n').map((x) => x.trim()).filter(Boolean);

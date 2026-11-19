@@ -7,8 +7,12 @@
 <style>
 :root{--lateral:#1f3a4d;--titulos:#1f3a4d;--fuente:Arial,Helvetica,sans-serif}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{margin:0;background:#e9edf0;font-family:var(--fuente);color:#222;line-height:1.5}
+#barraApp{display:flex;justify-content:space-between;max-width:820px;margin:6px auto 0;padding:0 4px}
+#barraApp a{color:#1f3a4d;font-size:14px;font-weight:bold;text-decoration:none;padding:8px 10px}
 #app{max-width:820px;margin:20px auto;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.2);display:flex;flex-wrap:wrap;min-height:300px}
+#barraApp:not([hidden]) + #app{margin-top:4px}
 #cargando{text-align:center;padding:60px 20px;color:#5a6b78;width:100%}
 .side{width:280px;background:var(--lateral);color:#fff;padding:30px 24px}
 .main{flex:1;min-width:280px;padding:30px}
@@ -24,25 +28,25 @@ li{margin-bottom:6px;font-size:14.5px}
 .main p{font-size:14.5px;margin:0 0 8px}
 .nota{font-style:italic;margin-top:8px}
 .wa{display:block;background:#25d366;color:#fff;text-align:center;text-decoration:none;font-weight:bold;padding:11px 8px;border-radius:6px;font-size:14px;margin-top:6px}
+.btnpdf{display:block;width:100%;background:transparent;color:#fff;text-align:center;font-weight:bold;padding:10px 8px;border:2px solid rgba(255,255,255,.8);border-radius:6px;font-size:14px;margin-top:10px;cursor:pointer;font-family:inherit}
+.btnpdf:disabled{opacity:.6;cursor:default}
 @media(max-width:640px){.side{width:100%}}
 @media print{
   body{background:#fff}
   #app{box-shadow:none;margin:0;max-width:none}
-  .wa{display:none}
+  .wa,.btnpdf,#barraApp{display:none}
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 @page{size:A4;margin:0}
 </style>
 </head>
 <body>
+<div id="barraApp" hidden><a href="app.html">← Inicio</a><a href="admin.html">Editar</a></div>
 <div id="app"><div id="cargando">Cargando…</div></div>
 <noscript><p style="text-align:center">Para ver este CV necesitás activar JavaScript.</p></noscript>
 
 <script src="cv-datos.js"></script>
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
-
 function nodo(tag, clase, texto) {
   var e = document.createElement(tag);
   if (clase) e.className = clase;
@@ -55,17 +59,42 @@ function lista(x) {
   return a.filter(function (v) { return v !== undefined && v !== null && v !== ''; });
 }
 function seccion(titulo) {
-  var h = nodo('h2', '', titulo);
-  return h;
+  return nodo('h2', '', titulo);
 }
 function ul(items) {
   var u = nodo('ul');
   items.forEach(function (t) { u.appendChild(nodo('li', '', t)); });
   return u;
 }
+function cargarScript(src) {
+  return new Promise(function (ok, mal) {
+    var s = document.createElement('script');
+    s.src = src;
+    s.onload = ok;
+    s.onerror = function () { mal(new Error('No se pudo cargar ' + src)); };
+    document.head.appendChild(s);
+  });
+}
+
+async function descargarPDF(ev) {
+  var b = ev.currentTarget;
+  var textoOriginal = b.textContent;
+  b.disabled = true;
+  b.textContent = 'Generando PDF…';
+  try {
+    if (!window.jspdf) await cargarScript('jspdf.umd.min.js');
+    if (!window.generarPDF) await cargarScript('cv-pdf.js');
+    await window.generarPDF(window.__cvActual);
+  } catch (e) {
+    alert('No se pudo generar el PDF. Revisá tu conexión e intentá de nuevo.');
+  }
+  b.disabled = false;
+  b.textContent = textoOriginal;
+}
 
 function render(d) {
   d = d || {};
+  window.__cvActual = d;
   var t = d.tema || {};
   var st = document.documentElement.style;
   st.setProperty('--lateral', t.colorLateral || '#1f3a4d');
@@ -101,6 +130,11 @@ function render(d) {
       side.appendChild(a);
     }
   }
+  var bp = nodo('button', 'btnpdf', 'Descargar PDF');
+  bp.type = 'button';
+  bp.onclick = descargarPDF;
+  side.appendChild(bp);
+
   if (d.edad) {
     side.appendChild(seccion('Datos personales'));
     var pe = nodo('p');
@@ -169,33 +203,59 @@ function render(d) {
   app.appendChild(side);
   app.appendChild(main);
 
-  if (location.search.indexOf('imprimir') !== -1) {
+  if (location.search.indexOf('imprimir') !== -1 && !render.yaImprimio) {
+    render.yaImprimio = true;
     setTimeout(function () { window.print(); }, 400);
   }
 }
 
-// Usa los datos guardados en Firebase; si están vacíos o no responde, usa los valores iniciales.
-function preparar(datos) {
-  return (datos && datos._v) ? datos : window.CV_DEFAULT;
+// ---- Datos: Firebase, con copia guardada en el dispositivo por si no hay conexión ----
+var CLAVE_CACHE = 'cv-cache';
+function leerCache() {
+  try {
+    var s = localStorage.getItem(CLAVE_CACHE);
+    var o = s ? JSON.parse(s) : null;
+    return (o && o._v) ? o : null;
+  } catch (e) { return null; }
+}
+function guardarCache(o) {
+  try { localStorage.setItem(CLAVE_CACHE, JSON.stringify(o)); } catch (e) {}
+}
+
+// Devuelve los datos, null si no hay nada guardado, o undefined si no pudo conectar.
+async function traerDatos() {
+  try {
+    var A = await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js');
+    var D = await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js');
+    var db = D.getDatabase(A.initializeApp(window.CV_FIREBASE));
+    var s = await D.get(D.ref(db, 'cv'));
+    return s.exists() ? s.val() : null;
+  } catch (e) {
+    return undefined;
+  }
 }
 
 async function main() {
-  var cargaDatos;
-  try {
-    var app = initializeApp(window.CV_FIREBASE);
-    var db = getDatabase(app);
-    cargaDatos = get(ref(db, 'cv')).then(function (s) { return s.exists() ? s.val() : null; }).catch(function () { return null; });
-  } catch (e) {
-    cargaDatos = Promise.resolve(null);
+  if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) {
+    document.getElementById('barraApp').hidden = false;
   }
+  var carga = traerDatos();
   var espera = new Promise(function (r) { setTimeout(function () { r('tarde'); }, 4000); });
-  var res = await Promise.race([cargaDatos, espera]);
+  var res = await Promise.race([carga, espera]);
+
   if (res === 'tarde') {
-    render(window.CV_DEFAULT);
-    var tardio = await cargaDatos;
-    if (tardio && tardio._v) render(tardio);
+    render(leerCache() || window.CV_DEFAULT);
+    res = await carga;
+    if (res && res._v) { guardarCache(res); render(res); }
+    return;
+  }
+  if (res && res._v) {
+    guardarCache(res);
+    render(res);
+  } else if (res === undefined) {
+    render(leerCache() || window.CV_DEFAULT);
   } else {
-    render(preparar(res));
+    render(window.CV_DEFAULT);
   }
 }
 main();

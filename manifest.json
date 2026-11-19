@@ -1,0 +1,18 @@
+{
+  "name": "Mi CV - Juan Pablo Nuñez",
+  "short_name": "Mi CV",
+  "description": "Mi currículum: ver, editar y compartir.",
+  "id": "/JuanPabloNu-ezCV/app.html",
+  "start_url": "/JuanPabloNu-ezCV/app.html",
+  "scope": "/JuanPabloNu-ezCV/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "lang": "es",
+  "background_color": "#1f3a4d",
+  "theme_color": "#1f3a4d",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

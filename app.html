@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#1f3a4d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Mi CV">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Mi CV</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:#1f3a4d;color:#fff;font-family:Arial,Helvetica,sans-serif;line-height:1.4;display:flex;justify-content:center}
+.caja{width:100%;max-width:460px;padding:28px 20px 40px;text-align:center}
+.logo{width:96px;height:96px;border-radius:22px;display:block;margin:8px auto 14px}
+h1{font-size:26px;margin:0}
+.sub{opacity:.75;margin:4px 0 26px;font-size:15px}
+.btn{display:block;width:100%;padding:16px 14px;margin-bottom:12px;border:0;border-radius:12px;font-size:18px;font-weight:bold;text-decoration:none;cursor:pointer;font-family:inherit}
+.btn.prim{background:#fff;color:#1f3a4d}
+.btn.sec{background:rgba(255,255,255,.14);color:#fff}
+.btn.verde{background:#25d366;color:#fff}
+.enlace{font-size:12px;opacity:.7;word-break:break-all;margin:6px 0 18px;user-select:all}
+.hr{border:0;border-top:1px solid rgba(255,255,255,.25);margin:22px 0}
+.ayuda{font-size:13px;opacity:.8;margin:6px 0 0}
+#aviso{height:22px;font-size:14px;color:#9ff0b9;margin-bottom:6px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="caja">
+  <img class="logo" src="icon-192.png" alt="">
+  <h1>Mi CV</h1>
+  <p class="sub">Juan Pablo Nuñez Fernandez</p>
+
+  <a class="btn prim" href="index.html">Ver mi CV</a>
+  <a class="btn sec" href="admin.html">Editar mi CV</a>
+
+  <hr class="hr">
+  <button class="btn verde" id="btnCopiar">Copiar enlace del CV</button>
+  <button class="btn sec" id="btnCompartir" hidden>Compartir enlace</button>
+  <div class="enlace" id="enlace"></div>
+  <div id="aviso"></div>
+
+  <div id="instalar" hidden>
+    <hr class="hr">
+    <button class="btn sec" id="btnInstalar" hidden>Instalar la app en este dispositivo</button>
+    <p class="ayuda" id="ayudaInstalar">Para instalarla: abrí el menú del navegador (⋮ o el botón Compartir) y elegí <b>Instalar app</b> o <b>Agregar a pantalla de inicio</b>.</p>
+  </div>
+</div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var enlaceCV = new URL('./', location.href).href; // dirección pública del CV (la carpeta de este repositorio)
+  $('enlace').textContent = enlaceCV;
+
+  function aviso(t) {
+    $('aviso').textContent = t;
+    clearTimeout(aviso.t);
+    aviso.t = setTimeout(function () { $('aviso').textContent = ''; }, 2500);
+  }
+
+  $('btnCopiar').onclick = function () {
+    function ok() { aviso('Enlace copiado ✔'); }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(enlaceCV).then(ok, function () { aviso('Mantené apretado el enlace de abajo para copiarlo.'); });
+    } else {
+      aviso('Mantené apretado el enlace de abajo para copiarlo.');
+    }
+  };
+
+  if (navigator.share) {
+    $('btnCompartir').hidden = false;
+    $('btnCompartir').onclick = function () {
+      navigator.share({ title: 'Mi CV', text: 'Mi currículum:', url: enlaceCV }).catch(function () {});
+    };
+  }
+
+  // Instalación
+  var yaInstalada = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  if (!yaInstalada) $('instalar').hidden = false;
+  var promptInstalar = null;
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    promptInstalar = e;
+    $('btnInstalar').hidden = false;
+    $('ayudaInstalar').hidden = true;
+  });
+  $('btnInstalar').onclick = function () {
+    if (!promptInstalar) return;
+    promptInstalar.prompt();
+    promptInstalar.userChoice.then(function () { promptInstalar = null; $('btnInstalar').hidden = true; });
+  };
+  window.addEventListener('appinstalled', function () { $('instalar').hidden = true; aviso('App instalada ✔'); });
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+  }
+})();
+</script>
+</body>
+</html>
