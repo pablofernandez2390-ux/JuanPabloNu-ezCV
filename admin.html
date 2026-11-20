@@ -53,6 +53,23 @@ button.chico{font-size:14px;padding:7px 10px}
     </div>
 
     <div class="card">
+      <h2>Preajustes</h2>
+      <p class="ayuda">Versiones del CV listas para usar (ej. "Reponedor", "Depósito"). Elegí una, tocá <b>Cargar</b>, cambiá lo puntual y tocá <b>Guardar cambios</b> abajo para publicarla. La foto no cambia al cargar.</p>
+      <select id="selPreajuste"></select>
+      <div class="fila" style="margin-top:10px">
+        <button class="chico" id="btnCargarPre">Cargar</button>
+        <button class="sec chico" id="btnActualizarPre">Actualizar con lo que veo</button>
+        <button class="peligro chico" id="btnBorrarPre">Borrar</button>
+      </div>
+      <label for="nombrePre">Guardar lo que veo ahora como preajuste nuevo</label>
+      <div class="fila">
+        <input type="text" id="nombrePre" placeholder="Nombre (ej. Reponedor)" style="flex:1;min-width:160px">
+        <button class="chico" id="btnNuevoPre">Guardar preajuste</button>
+      </div>
+      <p class="ayuda" id="estadoPre"></p>
+    </div>
+
+    <div class="card">
       <h2>Datos principales</h2>
       <label for="nombre">Nombre</label>
       <input type="text" id="nombre">
@@ -141,6 +158,7 @@ button.chico{font-size:14px;padding:7px 10px}
     </div>
 
     <div class="barra">
+      <button class="sec" id="btnPdfAqui">PDF de lo que veo</button>
       <button id="btnGuardar">Guardar cambios</button>
     </div>
   </div>
@@ -321,6 +339,113 @@ $('btnGuardar').onclick = async () => {
   btn.disabled = false;
 };
 
+// ---------- PDF de lo que está en el formulario (sin publicar) ----------
+function cargarScript(src) {
+  return new Promise((ok, mal) => {
+    const s = document.createElement('script');
+    s.src = src; s.onload = ok;
+    s.onerror = () => mal(new Error('No se pudo cargar ' + src));
+    document.head.appendChild(s);
+  });
+}
+$('btnPdfAqui').onclick = async () => {
+  const b = $('btnPdfAqui');
+  const t = b.textContent;
+  b.disabled = true; b.textContent = 'Generando…';
+  try {
+    if (!window.jspdf) await cargarScript('jspdf.umd.min.js');
+    if (!window.generarPDF) await cargarScript('cv-pdf.js');
+    await window.generarPDF(recoger());
+  } catch (e) { aviso('No se pudo generar el PDF: ' + (e.message || e), true); }
+  b.disabled = false; b.textContent = t;
+};
+
+// ---------- Preajustes (se guardan en el nodo "presets", visible solo para el administrador) ----------
+let presets = {};
+function errorPre(e) {
+  const sinPermiso = /permission/i.test(e.code || '') || /permission/i.test(e.message || '');
+  aviso(sinPermiso ? 'Falta permiso para los preajustes: agregá la regla "presets" en Realtime Database > Reglas.' : 'Error: ' + (e.message || e), true);
+}
+function datosParaPreajuste() {
+  const d = recoger();
+  delete d.foto; // la foto es pesada y no cambia entre versiones
+  return d;
+}
+function pintarPreajustes(elegir) {
+  const sel = $('selPreajuste');
+  sel.textContent = '';
+  const ids = Object.keys(presets).sort((a, b) => (presets[a].nombre || '').localeCompare(presets[b].nombre || '', 'es'));
+  if (!ids.length) {
+    const o = document.createElement('option');
+    o.value = ''; o.textContent = '(todavía no hay preajustes)';
+    sel.appendChild(o);
+  }
+  ids.forEach((id) => {
+    const o = document.createElement('option');
+    o.value = id; o.textContent = presets[id].nombre || id;
+    sel.appendChild(o);
+  });
+  if (elegir && presets[elegir]) sel.value = elegir;
+  $('btnCargarPre').disabled = $('btnActualizarPre').disabled = $('btnBorrarPre').disabled = !ids.length;
+}
+async function cargarPreajustes() {
+  try {
+    const s = await get(ref(db, 'presets'));
+    presets = s.exists() ? s.val() : {};
+    $('estadoPre').textContent = '';
+  } catch (e) {
+    presets = {};
+    $('estadoPre').textContent = 'No se pudieron leer los preajustes (revisá las reglas de la base de datos).';
+  }
+  pintarPreajustes();
+}
+$('btnNuevoPre').onclick = async () => {
+  const nombre = $('nombrePre').value.trim();
+  if (!nombre) { aviso('Escribí un nombre para el preajuste.', true); return; }
+  const id = 'p' + Date.now();
+  try {
+    const reg = { nombre, datos: datosParaPreajuste() };
+    await set(ref(db, 'presets/' + id), reg);
+    presets[id] = reg;
+    $('nombrePre').value = '';
+    pintarPreajustes(id);
+    aviso('Preajuste "' + nombre + '" guardado ✔');
+  } catch (e) { errorPre(e); }
+};
+$('btnActualizarPre').onclick = async () => {
+  const id = $('selPreajuste').value;
+  if (!id) return;
+  if (!confirm('¿Reemplazar el preajuste "' + presets[id].nombre + '" con lo que ves ahora?')) return;
+  try {
+    const reg = { nombre: presets[id].nombre, datos: datosParaPreajuste() };
+    await set(ref(db, 'presets/' + id), reg);
+    presets[id] = reg;
+    aviso('Preajuste actualizado ✔');
+  } catch (e) { errorPre(e); }
+};
+$('btnBorrarPre').onclick = async () => {
+  const id = $('selPreajuste').value;
+  if (!id) return;
+  if (!confirm('¿Borrar el preajuste "' + presets[id].nombre + '"?')) return;
+  try {
+    await set(ref(db, 'presets/' + id), null);
+    delete presets[id];
+    pintarPreajustes();
+    aviso('Preajuste borrado.');
+  } catch (e) { errorPre(e); }
+};
+$('btnCargarPre').onclick = () => {
+  const id = $('selPreajuste').value;
+  if (!id || !presets[id]) return;
+  const foto = cv.foto || '';
+  const nuevo = normalizar(Object.assign({ _v: 1 }, presets[id].datos));
+  nuevo.foto = foto;
+  cv = nuevo;
+  llenar();
+  aviso('"' + presets[id].nombre + '" cargado. Ajustá fechas o datos y tocá Guardar cambios para publicarlo.');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
 $('btnRestablecer').onclick = () => {
   if (!confirm('¿Cargar los valores iniciales en el formulario? Se pierde lo que no hayas guardado.')) return;
   cv = normalizar(null);
@@ -339,7 +464,7 @@ onAuthStateChanged(auth, (user) => {
     $('login').hidden = true;
     $('panel').hidden = false;
     $('quien').textContent = 'Sesión: ' + (user.email || '');
-    cargar();
+    cargar().then(cargarPreajustes);
   } else {
     $('panel').hidden = true;
     $('login').hidden = false;

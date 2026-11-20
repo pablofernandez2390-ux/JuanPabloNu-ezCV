@@ -203,6 +203,11 @@
     if (habs.length) { titulo('Habilidades'); vinetas(habs); }
     if (d.disponibilidad) { titulo('Disponibilidad'); parrafo(d.disponibilidad, 10, gris, 4.7); }
 
-    doc.save('CV-' + nombre.replace(/\s+/g, '-') + '.pdf');
+    var archivo = 'CV-' + nombre.replace(/\s+/g, '-') + '.pdf';
+    var url = URL.createObjectURL(doc.output('blob'));
+    var a = document.createElement('a');
+    a.href = url; a.download = archivo;
+    document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 4000);
   };
 })();
